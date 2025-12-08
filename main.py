@@ -5,14 +5,14 @@ import os
 import json
 
 # ============================================
-# ENVIRONMENT
+# ENVIRONMENT (Railway)
 # ============================================
 DISCORD_TOKEN = os.getenv("TOKEN")
 API_KEY = os.getenv("API_KEY")
 BASE_URL = "https://join4join.xyz/api/v1"
 
 # ============================================
-# LOCAL DEV STATS
+# LOCAL DEV STATS (Does NOT affect real rewards)
 # ============================================
 if not os.path.exists("devstats.json"):
     with open("devstats.json", "w") as f:
@@ -28,17 +28,17 @@ def save_stats(data):
 
 
 # ============================================
-# DISCORD BOT
+# DISCORD BOT SETUP
 # ============================================
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-COLOR = 0x7B2CBF  # DARK NEON PURPLE
+COLOR = 0x6f2dbd  # neon purple cyber theme
 
 
 # ============================================
-# CYBERPUNK EMBED
+# CYBERPUNK EMBED BUILDER
 # ============================================
 def cyber_embed(title, desc):
     e = discord.Embed(
@@ -51,7 +51,7 @@ def cyber_embed(title, desc):
 
 
 # ============================================
-# JOIN4JOIN API
+# JOIN4JOIN API WRAPPER
 # ============================================
 class Join4JoinAPI:
     def __init__(self):
@@ -64,7 +64,7 @@ class Join4JoinAPI:
                 try:
                     return await r.json()
                 except:
-                    return {"success": False, "message": "Invalid JSON"}
+                    return {"success": False, "message": "Invalid JSON from API"}
 
     async def create_user(self, user_id):
         return await self._post("user/create", {"user_id": user_id})
@@ -98,7 +98,10 @@ class Join4JoinAPI:
         return await self._post("join4join/info", {"guild_id": guild_id})
 
     async def check(self, guild_id, user_id):
-        return await self._post("join4join/check", {"guild_id": guild_id, "user_id": user_id})
+        return await self._post("join4join/check", {
+            "guild_id": guild_id,
+            "user_id": user_id
+        })
 
     async def checkall(self, user_id):
         return await self._post("join4join/check/all", {"user_id": user_id})
@@ -124,24 +127,21 @@ async def register(ctx):
     if res.get("message") == "This user has already an account.":
         return await ctx.send(embed=cyber_embed(
             header,
-            "🛸 You already have a **Join4Join account**.\nYou're ready to use all features!"
+            "You already have a **Join4Join account**.\nYou’re all set!"
         ))
 
     if not res.get("success"):
-        return await ctx.send(embed=cyber_embed(
-            header,
-            f"❌ Registration Failed\n`{res.get('message')}`"
-        ))
+        return await ctx.send(embed=cyber_embed(header, f"❌ `{res.get('message')}`"))
 
     stats = load_stats()
     stats["registered_users"] += 1
     save_stats(stats)
 
-    coins = res["data"]["coins"]
+    starting_coins = res["data"]["coins"]
 
     await ctx.send(embed=cyber_embed(
         header,
-        f"✅ **Account Created Successfully!**\n\n💰 Starting Coins: **{coins}**"
+        f"✅ **Account Created Successfully!**\n💰 Starting Coins: **{starting_coins}**"
     ))
 
 
@@ -156,17 +156,11 @@ async def coins(ctx):
     header = "💰⚡👾  COIN BALANCE  👾⚡💰\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     if not res.get("success"):
-        return await ctx.send(embed=cyber_embed(
-            header,
-            "❌ You must register first using `!register`."
-        ))
+        return await ctx.send(embed=cyber_embed(header, "❌ You must register first using `!register`."))
+    
+    balance = res["data"]["coins"]
 
-    coins = res["data"]["coins"]
-
-    await ctx.send(embed=cyber_embed(
-        header,
-        f"💰 Your current balance:\n**{coins} coins**"
-    ))
+    await ctx.send(embed=cyber_embed(header, f"💰 **Your Balance:** {balance} coins"))
 
 
 # -------------------------------
@@ -204,7 +198,7 @@ async def farm(ctx):
     uid = str(ctx.author.id)
     res = await api.farm(uid)
 
-    header = "🌱👾💜  FARMING ACTIVATED  💜👾🌱\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    header = "🌱👾💜  FARMING ACTIVATED  💜👾🌱"
 
     if not res.get("success"):
         return await ctx.send(embed=cyber_embed(header, f"❌ `{res.get('message')}`"))
@@ -215,10 +209,9 @@ async def farm(ctx):
         save_stats(stats)
 
     msg = (
-        "🧬 Your farming session is now active!\n"
-        "🚀 Click below to start farming and earning coins:\n\n"
-        "**[START FARMING](https://join4join.xyz/?aff=1317419437854560288)**\n\n"
-        "🧠 Make sure you're logged into your account first."
+        "Your farming session is activated!\n\n"
+        "**[CLICK HERE TO START FARMING](https://join4join.xyz/?aff=1317419437854560288)**\n\n"
+        "Make sure you are logged into your account before farming."
     )
 
     await ctx.send(embed=cyber_embed(header, msg))
@@ -228,40 +221,34 @@ async def farm(ctx):
 # !buy
 # -------------------------------
 @bot.command()
-async def buy(ctx, coins: int, invite: str, language: str, altfilter: str):
-    header = "🧪🚀💜  AD PURCHASE  💜🚀🧪\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+async def buy(ctx, coins: int, invite: str, language: str, altfilter: str = "no"):
+    header = "🧪🚀💜  AD PURCHASE  💜🚀🧪"
 
-    # EXTRACT REAL INVITE CODE
-    raw = invite.strip()
+    # Fix: extract ONLY invite code
+    def extract_inv(inv):
+        inv = inv.replace("https://", "").replace("http://", "")
+        for p in ["discord.gg/", "discord.com/invite/", "invite/", "discordapp.com/invite/"]:
+            if p in inv:
+                inv = inv.split(p)[1]
+        inv = inv.split("?")[0].split("/")[0]
+        return inv.strip()
 
-    if "discord.gg/" in raw:
-        raw = raw.split("discord.gg/")[1].split("/")[0]
-    elif "discord.com/invite/" in raw:
-        raw = raw.split("discord.com/invite/")[1].split("/")[0]
-    elif "invite/" in raw:
-        raw = raw.split("invite/")[1].split("/")[0]
-
-    invite_code = raw
-
+    invite_clean = extract_inv(invite)
     alt_bool = altfilter.lower() in ["yes", "true", "y"]
 
-    res = await api.buy(str(ctx.author.id), coins, invite_code, language, alt_bool)
+    res = await api.buy(str(ctx.author.id), coins, invite_clean, language, alt_bool)
 
     if not res.get("success"):
-        return await ctx.send(embed=cyber_embed(
-            header, f"❌ Error:\n`{res.get('message')}`"
-        ))
+        return await ctx.send(embed=cyber_embed(header, f"❌ `{res.get('message')}`"))
 
-    if "link" in res:
-        return await ctx.send(embed=cyber_embed(
-            header,
-            f"🔗 Click to confirm your advertisement:\n**[CONFIRM AD]({res['link']})**"
-        ))
+    msg = (
+        "📢 Your ad is prepared!\n\n"
+        "🔗 **Confirm or manage your advertisement here:**\n"
+        "[Dashboard](https://join4join.xyz/dashboard)\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    )
 
-    await ctx.send(embed=cyber_embed(
-        header,
-        "📢 Your advertisement is now **LIVE**!"
-    ))
+    await ctx.send(embed=cyber_embed("Ad Purchase", msg))
 
 
 # -------------------------------
@@ -269,22 +256,16 @@ async def buy(ctx, coins: int, invite: str, language: str, altfilter: str):
 # -------------------------------
 @bot.command()
 async def pay(ctx, receiver_id: str, coins: int):
-    header = "💸🌌⚡  COIN TRANSFER  ⚡🌌💸\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    header = "💸🌌⚡  COIN TRANSFER  ⚡🌌💸"
 
     res = await api.pay(receiver_id, str(ctx.author.id), coins)
 
     if not res.get("success"):
-        return await ctx.send(embed=cyber_embed(header, f"❌ Error:\n`{res}`"))
-
-    if "link" in res:
-        return await ctx.send(embed=cyber_embed(
-            header,
-            f"🔗 Confirm transfer:\n**[CONFIRM TRANSFER]({res['link']})**"
-        ))
+        return await ctx.send(embed=cyber_embed(header, f"❌ `{res.get('message')}`"))
 
     await ctx.send(embed=cyber_embed(
         header,
-        f"💸 Successfully sent **{coins} coins** to `{receiver_id}`!"
+        f"💸 **Payment Completed!**\nSent **{coins} coins** to `{receiver_id}`."
     ))
 
 
@@ -293,7 +274,7 @@ async def pay(ctx, receiver_id: str, coins: int):
 # -------------------------------
 @bot.command()
 async def info(ctx, guild_id: str = None):
-    header = "📡🧬💜  SERVER INFORMATION  💜🧬📡\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    header = "📡🧬💜  SERVER INFORMATION  💜🧬📡"
 
     gid = guild_id or str(ctx.guild.id)
     res = await api.info(gid)
@@ -318,10 +299,10 @@ async def info(ctx, guild_id: str = None):
 # !check
 # -------------------------------
 @bot.command()
-async def check(ctx, guild_id: str = None):
-    header = "🧪💜🧬  LEAVE CHECK  🧬💜🧪\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+async def check(ctx, server_id: str = None):
+    header = "🧪💜🧬  LEAVE CHECK  🧬💜🧪"
 
-    gid = guild_id or str(ctx.guild.id)
+    gid = server_id or str(ctx.guild.id)
     res = await api.check(gid, str(ctx.author.id))
 
     if not res.get("success"):
@@ -337,19 +318,27 @@ async def check(ctx, guild_id: str = None):
 # -------------------------------
 @bot.command()
 async def checkall(ctx):
-    header = "📜🌌💜  LEAVEABLE SERVERS  💜🌌📜\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    header = "📜🌌💜  LEAVEABLE SERVERS  💜🌌📜"
 
     res = await api.checkall(str(ctx.author.id))
 
     if not res.get("success"):
-        return await ctx.send(embed=cyber_embed(header, f"❌ `{res}`"))
+        return await ctx.send(embed=cyber_embed(header, f"❌ {res}"))
 
     ids = res["data"]["check"]
-
     if not ids:
-        return await ctx.send(embed=cyber_embed(header, "❌ You cannot leave any servers yet."))
+        return await ctx.send(embed=cyber_embed(header, "❌ No servers can be left right now."))
 
-    msg = "\n".join(f"• `{g}`" for g in ids)
+    msg = ""
+    for gid in ids:
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild:
+                msg += f"• **{guild.name}** (`{gid}`)\n"
+            else:
+                msg += f"• `{gid}` (not in cache)\n"
+        except:
+            msg += f"• `{gid}`\n"
 
     await ctx.send(embed=cyber_embed(header, msg))
 
@@ -359,18 +348,19 @@ async def checkall(ctx):
 # -------------------------------
 @bot.command()
 async def devstats(ctx):
-    header = "📊👾💜  DEVELOPER STATS  💜👾📊\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    header = "📊👾💜  DEVELOPER STATS  💜👾📊"
 
     stats = load_stats()
     reg = stats["registered_users"]
     farms = len(stats["farmed_users"])
-    est_coins = reg * 3
+
+    estimated = reg * 3  # REWARD: 3 coins per registration
 
     msg = (
         f"🧍 **Registered Users:** {reg}\n"
-        f"🌱 **Users Who Entered Farming:** {farms}\n\n"
-        f"💰 **Estimated Dev Coins:** {est_coins}\n"
-        "(Backend handles real farming coins.)"
+        f"🌱 **Farming Users:** {farms}\n"
+        f"💰 **Estimated Dev Coins:** {estimated}\n"
+        "*Real coins handled by Join4Join backend*"
     )
 
     await ctx.send(embed=cyber_embed(header, msg))
@@ -381,59 +371,38 @@ async def devstats(ctx):
 # -------------------------------
 @bot.command()
 async def j4jhelp(ctx):
-    header = "📘🛸💜  COMMAND MENU  💜🛸📘\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    header = "📘🛸💜  COMMAND MENU  💜🛸📘"
 
     msg = (
-        f"{header}\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "**👾 ACCOUNT COMMANDS**\n"
-        "• `!register` – Create your J4J account\n"
-        "  Example: `!register`\n\n"
+        "• `!register`\n"
+        "• `!coins`\n"
+        "• `!daily`\n\n"
         
-        "• `!coins` – Check your balance\n"
-        "  Example: `!coins`\n\n"
-        
-        "• `!daily` – Claim your daily reward\n"
-        "  Example: `!daily`\n\n"
-
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "**🌱 FARMING COMMANDS**\n"
-        "• `!farm` – Open farming page (affiliate link)\n"
-        "  Example: `!farm`\n\n"
+        "• `!farm`\n"
+        "• `!check <server-id>`\n"
+        "• `!checkall`\n\n"
 
-        "• `!check` – Check leave eligibility\n"
-        "  Example: `!check`\n\n"
+        "**📢 AD COMMANDS**\n"
+        "`!buy <coins> <invite> <language> <yes/no>`\n"
+        "Example: `!buy 3 discord.gg/abc en yes`\n\n"
 
-        "• `!checkall` – List all safely leavable servers\n"
-        "  Example: `!checkall`\n\n"
-
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**📢 ADVERTISEMENT COMMANDS**\n"
-        "• `!buy <coins> <invite> <language> <yes/no>`\n"
-        "  Example: `!buy 3 discord.gg/6nRx3KWG en yes`\n"
-        "  Languages: `en`, `fr`, `tr`, `all`\n"
-        "  Alt filter: `yes` or `no`\n\n"
-
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
         "**💸 COIN TRANSFER**\n"
-        "• `!pay <user_id> <amount>`\n"
-        "  Example: `!pay 123456789012345678 15`\n\n"
+        "`!pay <user-id> <coins>`\n\n"
 
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**📡 SERVER INFORMATION**\n"
-        "• `!info` – Info about this server\n"
-        "• `!info <guild>` – Info about any server\n"
-        "  Example: `!info 123456789012345678`\n\n"
+        "**📡 SERVER INFO**\n"
+        "`!info`\n"
+        "`!info <server-id>`\n\n"
 
+        "**👑 DEV**\n"
+        "`!devstats`\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "**👑 DEVELOPER COMMANDS**\n"
-        "• `!devstats` – See your affiliate stats\n"
-        "  Example: `!devstats`\n\n"
-
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "💜 **Join4Join Cyberpunk Edition – All systems online.**"
+        "💜 All systems online."
     )
 
-    await ctx.send(embed=cyber_embed("📘 Command Menu", msg))
+    await ctx.send(embed=cyber_embed(header, msg))
 
 
 # ============================================
