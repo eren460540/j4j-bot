@@ -101,9 +101,17 @@ async def register(ctx):
 @bot.command()
 async def coins(ctx):
     res = await api.get_user(str(ctx.author.id))
+
+    # Debug: show what the API returned
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     if not res["success"]:
-        return await ctx.send("❌ You don't have an account. Use `!register`.")
-    await ctx.send(f"💰 You have **{res['data']['coins']} coins**.")
+        return await ctx.send("❌ You don't have an account. Use `!register` first.")
+
+    coins = res["data"]["coins"]
+    await ctx.send(f"💰 You have **{coins} coins**.")
+
 
 
 @bot.command()
