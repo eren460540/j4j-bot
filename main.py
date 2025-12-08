@@ -116,15 +116,34 @@ def embed(title, desc, color=COLOR):
 async def register(ctx):
     res = await api.create_user(str(ctx.author.id))
 
-    if not res.get("success"):
-        return await ctx.send(embed=embed("❌ Registration Failed", str(res)))
+    # If user already has an account
+    if res.get("message") == "This user has already an account.":
+        return await ctx.send(embed=embed(
+            "ℹ️ Already Registered",
+            "You already have a Join4Join account.\nYou can use all commands normally!",
+            COLOR
+        ))
 
+    # If ANY other error happens
+    if not res.get("success"):
+        return await ctx.send(embed=embed(
+            "❌ Registration Failed",
+            f"Error: {res.get('message', 'Unknown error')}",
+            0xE74C3C
+        ))
+
+    # Successful registration
     stats = load_stats()
     stats["registered_users"] += 1
     save_stats(stats)
 
     coins = res["data"]["coins"]
-    await ctx.send(embed=embed("✅ Account Created", f"You now have **{coins} coins**!"))
+    await ctx.send(embed=embed(
+        "✅ Account Created",
+        f"Your account is ready!\nYou currently have **{coins} coins**.",
+        COLOR
+    ))
+
 
 
 @bot.command()
