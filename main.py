@@ -167,9 +167,9 @@ async def farm(ctx):
     res = await api.farm(uid)
 
     if not res.get("success"):
-        return await ctx.send(embed=embed("❌ Error", str(res)))
+        return await ctx.send(embed=embed("❌ Error", res.get("message", "Unknown error")))
 
-    # Track unique affiliates (for dev rewards)
+    # Track unique farming users locally (real dev rewards handled by Join4Join)
     stats = load_stats()
     if uid not in stats["farmed_users"]:
         stats["farmed_users"].append(uid)
@@ -178,8 +178,8 @@ async def farm(ctx):
     msg = (
         "🌱 **Farming Activated!**\n\n"
         "Your farming session is now linked to this bot.\n"
-        "To actually farm and earn coins, go to the farming website:\n\n"
-        "**🌐 https://join4join.xyz/farm**\n\n"
+        "To begin farming and earning coins, open the official farming page:\n\n"
+        "**[Click Here](https://join4join.xyz/dashboard/join4join/farm)**\n\n"
         "Make sure you're logged into the correct account."
     )
 
