@@ -283,27 +283,40 @@ async def j4jhelp(ctx):
     msg = (
         "**👤 ACCOUNT COMMANDS**\n"
         "• `!register` – Create your Join4Join account\n"
+        "  *Example:* `!register`\n\n"
+        
         "• `!coins` – Check your coin balance\n"
-        "• `!daily` – Claim daily coins\n\n"
-
+        "  *Example:* `!coins`\n\n"
+        
+        "• `!daily` – Claim your daily reward\n"
+        "  *Example:* `!daily`\n\n"
+        
         "**🌱 FARMING COMMANDS**\n"
-        "• `!farm` – Activate farming (website farming starts)\n"
-        "• `!check` – Check if you can leave current server\n"
-        "• `!checkall` – List all servers you can leave\n\n"
-
-        "**📢 ADVERTISING**\n"
-        "• `!buy <coins> <invite> <language> <alt>` – Buy a Join4Join ad\n\n"
-
+        "• `!farm` – Activate farming affiliation (farming is done on the website)\n"
+        "  *Example:* `!farm`\n\n"
+        
+        "• `!check` – Check if you can leave the current server\n"
+        "  *Example:* `!check`\n\n"
+        
+        "• `!checkall` – List all servers you can leave safely\n"
+        "  *Example:* `!checkall`\n\n"
+        
+        "**📢 ADVERTISING COMMANDS**\n"
+        "• `!buy <coins> <invite> <language> <alt>` – Create a Join4Join ad\n"
+        "  *Example:* `!buy 3 discord.gg/yourserver en yes`\n"
+        "  *(Language: en/fr/tr/all — Alt filter: yes/no)*\n\n"
+        
         "**💸 COIN TRANSFER**\n"
-        "• `!pay <user_id> <coins>` – Send coins to another user\n\n"
-
-        "**👑 DEVELOPER**\n"
-        "• `!devstats` – View your developer earnings and affiliates\n\n"
-
-        "🔗 *Farming happens on:* https://join4join.xyz\n"
+        "• `!pay <user_id> <coins>` – Send coins to another user\n"
+        "  *Example:* `!pay 123456789012345678 5`\n\n"
+        
+        "**👑 DEVELOPER COMMANDS**\n"
+        "• `!devstats` – View how many users you registered & farm-affiliated\n"
+        "  *Example:* `!devstats`\n"
     )
 
     await ctx.send(embed=embed("🤖 Join4Join Bot Help Menu", msg))
+
 
 
 # ======================================================
