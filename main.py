@@ -17,19 +17,24 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 # -------------------------
-# JOIN4JOIN API WRAPPER
+# JOIN4JOIN API WRAPPER (AUTH HEADER VERSION)
 # -------------------------
 class Join4JoinAPI:
     def __init__(self):
         self.secret_key = API_KEY
 
     async def _post(self, endpoint: str, params: dict):
-        params["secret_key"] = self.secret_key
+        headers = {"Authorization": self.secret_key}
+
         async with aiohttp.ClientSession() as session:
-            async with session.post(f"{BASE_URL}/{endpoint}", params=params) as r:
+            async with session.post(
+                f"{BASE_URL}/{endpoint}",
+                json=params,
+                headers=headers
+            ) as r:
                 return await r.json()
 
-    # USER ENDPOINTS (POST ONLY — FIXED)
+    # USER ENDPOINTS
     async def create_user(self, user_id):
         return await self._post("user/create", {"user_id": user_id})
 
@@ -43,14 +48,14 @@ class Join4JoinAPI:
             "coins": coins,
             "invite": invite,
             "filter_language": lang,
-            "filter_account": str(alt).lower()
+            "filter_account": alt
         })
 
     # FARM SERVERS
     async def farm(self, user_id):
         return await self._post("join4join/farm", {"user_id": user_id})
 
-    # SEND COINS
+    # PAY COINS
     async def pay(self, receiver, donator, coins):
         return await self._post("join4join/pay", {
             "user_receiver": receiver,
@@ -84,19 +89,26 @@ api = Join4JoinAPI()
 # -------------------------
 # COMMANDS
 # -------------------------
+
 @bot.command()
 async def register(ctx):
     res = await api.create_user(str(ctx.author.id))
 
-    # Show the entire API response for debugging
-    return await ctx.send(f"🔍 API Response: `{res}`")
+    if "success" not in res:
+        return await ctx.send(f"❌ API Error: `{res}`")
+
+    if not res["success"]:
+        return await ctx.send(f"❌ Could not register: {res.get('message', 'Unknown error')}")
+
+    await ctx.send(f"✅ Registered! You have **{res['data']['coins']} coins**.")
+
 
 @bot.command()
 async def coins(ctx):
     res = await api.get_user(str(ctx.author.id))
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     if not res["success"]:
         return await ctx.send("❌ You don't have an account. Use `!register` first.")
@@ -109,12 +121,12 @@ async def daily(ctx):
     res = await api.daily(str(ctx.author.id))
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     data = res["data"]
 
     if not data["ready"]:
-        return await ctx.send(f"⏳ Wait **{data['remaining_time']} ms**.")
+        return await ctx.send(f"⏳ Wait **{data['remaining_time']} ms** before next daily.")
 
     await ctx.send(f"🎁 You received **{data['amount']} coins**!")
 
@@ -124,7 +136,7 @@ async def farm(ctx):
     res = await api.farm(str(ctx.author.id))
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     servers = res["data"]
 
@@ -140,10 +152,10 @@ async def buy(ctx, coins: int, invite: str, language: str, alt: bool = False):
     res = await api.buy(str(ctx.author.id), coins, invite, language, alt)
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     if not res["success"]:
-        return await ctx.send("❌ Failed to buy the ad.")
+        return await ctx.send("❌ Could not buy the ad.")
 
     if "link" in res:
         return await ctx.send(f"🔗 Confirm your purchase: {res['link']}")
@@ -153,17 +165,16 @@ async def buy(ctx, coins: int, invite: str, language: str, alt: bool = False):
 
 @bot.command()
 async def pay(ctx, receiver_id: str, coins: int):
-    donor_id = str(ctx.author.id)
-    res = await api.pay(receiver_id, donor_id, coins)
+    res = await api.pay(receiver_id, str(ctx.author.id), coins)
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     if not res["success"]:
         return await ctx.send("❌ Transfer failed.")
 
     if "link" in res:
-        return await ctx.send(f"🔗 Confirm here: {res['link']}")
+        return await ctx.send(f"🔗 Confirm transfer: {res['link']}")
 
     await ctx.send(f"💸 Sent **{coins} coins** to `{receiver_id}`!")
 
@@ -174,10 +185,10 @@ async def info(ctx, guild_id: str = None):
     res = await api.info(guild_id)
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     if not res["success"]:
-        return await ctx.send("❌ Could not get server info.")
+        return await ctx.send("❌ Could not fetch server info.")
 
     data = res["data"]
 
@@ -197,7 +208,7 @@ async def check(ctx, guild_id: str = None):
     res = await api.check(guild_id, str(ctx.author.id))
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     await ctx.send(f"🚪 Can leave: **{res['data']['check']}**")
 
@@ -207,7 +218,7 @@ async def checkall(ctx):
     res = await api.check_all(str(ctx.author.id))
 
     if "success" not in res:
-        return await ctx.send(f"❌ API error: `{res}`")
+        return await ctx.send(f"❌ API Error: `{res}`")
 
     ids = res["data"]["check"]
 
