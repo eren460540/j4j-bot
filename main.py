@@ -84,17 +84,12 @@ api = Join4JoinAPI()
 # -------------------------
 # COMMANDS
 # -------------------------
-@bot.command()
+@@bot.command()
 async def register(ctx):
     res = await api.create_user(str(ctx.author.id))
-    if "success" not in res:
-        return await ctx.send(f"❌ API Error: `{res}`")
 
-    if not res["success"]:
-        return await ctx.send("❌ Could not register (you might already be registered).")
-
-    await ctx.send(f"✅ Registered! You have **{res['data']['coins']} coins**.")
-
+    # Show the entire API response for debugging
+    return await ctx.send(f"🔍 API Response: `{res}`")
 
 @bot.command()
 async def coins(ctx):
