@@ -377,28 +377,59 @@ async def j4jhelp(ctx):
     header = "📘🛸💜  COMMAND MENU  💜🛸📘\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     msg = (
+        f"{header}\n"
         "**👾 ACCOUNT COMMANDS**\n"
-        "`!register` – create your account\n"
-        "`!coins` – view coins\n"
-        "`!daily` – claim daily reward\n\n"
+        "• `!register` – Create your J4J account\n"
+        "  **Example:** `!register`\n\n"
+        
+        "• `!coins` – Check your current balance\n"
+        "  **Example:** `!coins`\n\n"
+        
+        "• `!daily` – Claim your daily reward\n"
+        "  **Example:** `!daily`\n\n"
 
-        "**🌱 FARMING**\n"
-        "`!farm` – link farming session\n"
-        "`!check` – leave check\n"
-        "`!checkall` – list leaveable servers\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "**🌱 FARMING COMMANDS**\n"
+        "• `!farm` – Activate your farming session\n"
+        "  **Example:** `!farm`\n\n"
 
-        "**📢 ADVERTISING**\n"
-        "`!buy <coins> <invite> <lang> <yes/no>`\n"
-        "Example: `!buy 3 6nRx3KWG en yes`\n\n"
+        "• `!check` – Check if you can leave the current server\n"
+        "  **Example:** `!check`\n\n"
 
-        "**💸 TRANSFERS**\n"
-        "`!pay <user_id> <coins>`\n\n"
+        "• `!checkall` – List all servers you can leave safely\n"
+        "  **Example:** `!checkall`\n\n"
 
-        "**👑 DEVELOPER**\n"
-        "`!devstats` – view dev reward stats\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "**📢 ADVERTISEMENT COMMANDS**\n"
+        "• `!buy <coins> <invite> <language> <yes/no>` – Purchase an ad\n"
+        "  **Example:** `!buy 3 6nRx3KWG en yes`\n"
+        "  **Language options:** `en`, `fr`, `tr`, `all`\n"
+        "  **Alt filter:** `yes` or `no`\n"
+        "  **Invite formats accepted:** `discord.gg/aaa`, `discord.com/invite/aaa`, or just `aaa`\n\n"
+
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "**💸 COIN TRANSFER**\n"
+        "• `!pay <user_id> <amount>` – Send coins to another user\n"
+        "  **Example:** `!pay 123456789012345678 10`\n\n"
+
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "**📡 SERVER INFORMATION**\n"
+        "• `!info` – Get info about the current server\n"
+        "  **Example:** `!info`\n\n"
+        "• `!info <guild_id>` – Check another server by ID\n"
+        "  **Example:** `!info 123456789012345678`\n\n"
+
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "**👑 DEVELOPER COMMANDS**\n"
+        "• `!devstats` – See registered users, farming affiliates, and estimated dev coins\n"
+        "  **Example:** `!devstats`\n\n"
+
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "💜 **Join4Join Cyberpunk Edition – All systems online.**"
     )
 
-    await ctx.send(embed=cyber_embed(header, msg))
+    await ctx.send(embed=cyber_embed("📘 Command Menu", msg))
+
 
 
 # ============================================
