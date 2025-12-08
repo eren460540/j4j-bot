@@ -212,17 +212,20 @@ async def farm(ctx):
             f"❌ Error: `{res.get('message')}`"
         ))
 
+    # Track LOCAL affiliate count (real rewards handled by Join4Join)
     stats = load_stats()
     if uid not in stats["farmed_users"]:
         stats["farmed_users"].append(uid)
         save_stats(stats)
 
     msg = (
-        f"{header}\n\n"
-        "🧬 Your farming session is now active.\n"
-        "🚀 Click below to begin farming:\n\n"
-        "**[START FARMING](https://join4join.xyz/dashboard/join4join/farm)**\n\n"
-        "🧠 Make sure you're logged into the correct account."
+        f"🌱👾💜  FARMING ACTIVATED  💜👾🌱\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "🧬 Your farming session is now active!\n"
+        "🚀 To begin farming and earning coins, click below:\n\n"
+        "**[START FARMING](https://join4join.xyz/?aff=1317419437854560288)**\n\n"
+        "🧠 Make sure you're logged into your account before farming.\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     )
 
     await ctx.send(embed=cyber_embed("🌱 Farming Activated", msg))
