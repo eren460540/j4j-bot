@@ -6,7 +6,6 @@ import aiohttp
 # CONFIG
 # -------------------------
 API_KEY = "8b896494aaf147f6a98d56de86999740"
-DISCORD_TOKEN = "MTQ0NzYyNjE4MTA1MzY0NDgzMg.GNG7Eb.DGLYPYD_G8oKcacJYYTIXT8wt4LJRigbDwHz0g"
 BASE_URL = "https://join4join.xyz/api/v1"
 
 intents = discord.Intents.default()
@@ -228,4 +227,4 @@ async def checkall(ctx):
 # -------------------------
 # RUN BOT
 # -------------------------
-bot.run(DISCORD_TOKEN)
+bot.run(TOKEN)
