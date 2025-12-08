@@ -1,11 +1,10 @@
 import discord
 from discord.ext import commands
 import aiohttp
+import os
 
-# -------------------------
-# CONFIG
-# -------------------------
-API_KEY = "8b896494aaf147f6a98d56de86999740"
+API_KEY = os.getenv("API_KEY")
+DISCORD_TOKEN = os.getenv("TOKEN")
 BASE_URL = "https://join4join.xyz/api/v1"
 
 intents = discord.Intents.default()
