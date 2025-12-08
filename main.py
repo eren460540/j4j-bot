@@ -6,13 +6,13 @@ import os
 # -------------------------
 # LOAD VARIABLES FROM RAILWAY
 # -------------------------
-DISCORD_TOKEN = os.getenv("TOKEN")      # Your Discord bot token from Railway
-API_KEY = os.getenv("API_KEY")          # Your Join4Join API key from Railway
+DISCORD_TOKEN = os.getenv("TOKEN")
+API_KEY = os.getenv("API_KEY")
 
 BASE_URL = "https://join4join.xyz/api/v1"
 
 intents = discord.Intents.default()
-intents.message_content = True  # prevents warning
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
@@ -29,18 +29,12 @@ class Join4JoinAPI:
             async with session.post(f"{BASE_URL}/{endpoint}", params=params) as r:
                 return await r.json()
 
-    async def _get(self, endpoint: str, params: dict):
-        params["secret_key"] = self.secret_key
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{BASE_URL}/{endpoint}", params=params) as r:
-                return await r.json()
-
-    # USER ENDPOINTS
+    # USER ENDPOINTS (POST ONLY — FIXED)
     async def create_user(self, user_id):
         return await self._post("user/create", {"user_id": user_id})
 
     async def get_user(self, user_id):
-        return await self._get("user/get", {"user_id": user_id})
+        return await self._post("user/get", {"user_id": user_id})
 
     # BUY AD
     async def buy(self, user_id, coins, invite, lang, alt):
@@ -68,18 +62,18 @@ class Join4JoinAPI:
     async def info(self, guild_id):
         return await self._post("join4join/info", {"guild_id": guild_id})
 
-    # CHECK LEAVE
+    # CHECK IF USER CAN LEAVE SERVER
     async def check(self, guild_id, user_id):
         return await self._post("join4join/check", {
             "guild_id": guild_id,
             "user_id": user_id
         })
 
-    # CLAIM DAILY
+    # CLAIM DAILY REWARD
     async def daily(self, user_id):
         return await self._post("join4join/daily", {"user_id": user_id})
 
-    # CHECK ALL SERVERS CAN LEAVE
+    # CHECK ALL LEAVABLE SERVERS
     async def check_all(self, user_id):
         return await self._post("join4join/check/all", {"user_id": user_id})
 
@@ -93,8 +87,12 @@ api = Join4JoinAPI()
 @bot.command()
 async def register(ctx):
     res = await api.create_user(str(ctx.author.id))
+    if "success" not in res:
+        return await ctx.send(f"❌ API Error: `{res}`")
+
     if not res["success"]:
-        return await ctx.send("❌ Could not register. You may already have an account.")
+        return await ctx.send("❌ Could not register (you might already be registered).")
+
     await ctx.send(f"✅ Registered! You have **{res['data']['coins']} coins**.")
 
 
@@ -102,37 +100,42 @@ async def register(ctx):
 async def coins(ctx):
     res = await api.get_user(str(ctx.author.id))
 
-    # Debug: show what the API returned
     if "success" not in res:
         return await ctx.send(f"❌ API error: `{res}`")
 
     if not res["success"]:
         return await ctx.send("❌ You don't have an account. Use `!register` first.")
 
-    coins = res["data"]["coins"]
-    await ctx.send(f"💰 You have **{coins} coins**.")
-
+    await ctx.send(f"💰 You have **{res['data']['coins']} coins**.")
 
 
 @bot.command()
 async def daily(ctx):
     res = await api.daily(str(ctx.author.id))
-    if not res["success"]:
-        return await ctx.send("❌ Could not claim daily.")
+
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     data = res["data"]
+
     if not data["ready"]:
-        return await ctx.send(f"⏳ Wait **{data['remaining_time']} ms** to claim again.")
+        return await ctx.send(f"⏳ Wait **{data['remaining_time']} ms**.")
+
     await ctx.send(f"🎁 You received **{data['amount']} coins**!")
 
 
 @bot.command()
 async def farm(ctx):
     res = await api.farm(str(ctx.author.id))
-    if not res["success"]:
-        return await ctx.send("❌ Could not get farm servers.")
+
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     servers = res["data"]
+
     if not servers:
         return await ctx.send("🌿 No servers available to farm right now.")
+
     msg = "\n".join(f"- `{s}`" for s in servers)
     await ctx.send(f"🌱 Farm these servers:\n{msg}")
 
@@ -140,10 +143,16 @@ async def farm(ctx):
 @bot.command()
 async def buy(ctx, coins: int, invite: str, language: str, alt: bool = False):
     res = await api.buy(str(ctx.author.id), coins, invite, language, alt)
+
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     if not res["success"]:
-        return await ctx.send("❌ Could not buy the ad.")
+        return await ctx.send("❌ Failed to buy the ad.")
+
     if "link" in res:
         return await ctx.send(f"🔗 Confirm your purchase: {res['link']}")
+
     await ctx.send("🎉 Ad purchased automatically!")
 
 
@@ -151,10 +160,16 @@ async def buy(ctx, coins: int, invite: str, language: str, alt: bool = False):
 async def pay(ctx, receiver_id: str, coins: int):
     donor_id = str(ctx.author.id)
     res = await api.pay(receiver_id, donor_id, coins)
+
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     if not res["success"]:
         return await ctx.send("❌ Transfer failed.")
+
     if "link" in res:
         return await ctx.send(f"🔗 Confirm here: {res['link']}")
+
     await ctx.send(f"💸 Sent **{coins} coins** to `{receiver_id}`!")
 
 
@@ -162,9 +177,15 @@ async def pay(ctx, receiver_id: str, coins: int):
 async def info(ctx, guild_id: str = None):
     guild_id = guild_id or str(ctx.guild.id)
     res = await api.info(guild_id)
+
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     if not res["success"]:
-        return await ctx.send("❌ Could not fetch server info.")
+        return await ctx.send("❌ Could not get server info.")
+
     data = res["data"]
+
     await ctx.send(
         f"📌 **Server Info**\n"
         f"Name: {data['name']}\n"
@@ -179,19 +200,25 @@ async def info(ctx, guild_id: str = None):
 async def check(ctx, guild_id: str = None):
     guild_id = guild_id or str(ctx.guild.id)
     res = await api.check(guild_id, str(ctx.author.id))
-    if not res["success"]:
-        return await ctx.send("❌ Could not check leave status.")
+
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     await ctx.send(f"🚪 Can leave: **{res['data']['check']}**")
 
 
 @bot.command()
 async def checkall(ctx):
     res = await api.check_all(str(ctx.author.id))
-    if not res["success"]:
-        return await ctx.send("❌ Could not check servers.")
+
+    if "success" not in res:
+        return await ctx.send(f"❌ API error: `{res}`")
+
     ids = res["data"]["check"]
+
     if not ids:
         return await ctx.send("❌ No servers you can leave.")
+
     msg = "\n".join(f"- `{gid}`" for gid in ids)
     await ctx.send(f"📜 Servers you can leave:\n{msg}")
 
