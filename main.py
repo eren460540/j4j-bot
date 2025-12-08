@@ -12,7 +12,7 @@ API_KEY = os.getenv("API_KEY")
 BASE_URL = "https://join4join.xyz/api/v1"
 
 # ======================================================
-# LOCAL DEV STATS STORAGE (Safe, does NOT affect API)
+# LOCAL DEV STATS STORAGE (SAFE - DOES NOT AFFECT REAL DEV REWARDS)
 # ======================================================
 if not os.path.exists("devstats.json"):
     with open("devstats.json", "w") as f:
@@ -35,14 +35,13 @@ def save_stats(data):
 # ======================================================
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 COLOR = 0x6f2dbd  # Dark neon purple
 
 
 # ======================================================
-# API WRAPPER (SAFE FOR DEV REWARDS)
+# API WRAPPER (CORRECT FOR DEV REWARDS)
 # ======================================================
 class Join4JoinAPI:
     def __init__(self):
@@ -100,7 +99,7 @@ api = Join4JoinAPI()
 
 
 # ======================================================
-# HELPER FOR PRETTY EMBEDS
+# EMBED HELPER
 # ======================================================
 def embed(title, desc, color=COLOR):
     e = discord.Embed(title=title, description=desc, color=color)
@@ -116,34 +115,25 @@ def embed(title, desc, color=COLOR):
 async def register(ctx):
     res = await api.create_user(str(ctx.author.id))
 
-    # If user already has an account
+    # Already registered
     if res.get("message") == "This user has already an account.":
         return await ctx.send(embed=embed(
             "ℹ️ Already Registered",
-            "You already have a Join4Join account.\nYou can use all commands normally!",
+            "You already have a Join4Join account.\nYou can use the bot normally!",
             COLOR
         ))
 
-    # If ANY other error happens
+    # Error
     if not res.get("success"):
-        return await ctx.send(embed=embed(
-            "❌ Registration Failed",
-            f"Error: {res.get('message', 'Unknown error')}",
-            0xE74C3C
-        ))
+        return await ctx.send(embed=embed("❌ Registration Failed", res.get("message", "Unknown error"), 0xE74C3C))
 
-    # Successful registration
+    # New registration → you get +3 real dev coins
     stats = load_stats()
     stats["registered_users"] += 1
     save_stats(stats)
 
     coins = res["data"]["coins"]
-    await ctx.send(embed=embed(
-        "✅ Account Created",
-        f"Your account is ready!\nYou currently have **{coins} coins**.",
-        COLOR
-    ))
-
+    await ctx.send(embed=embed("✅ Account Created", f"You now have **{coins} coins**!"))
 
 
 @bot.command()
@@ -151,10 +141,9 @@ async def coins(ctx):
     res = await api.get_user(str(ctx.author.id))
 
     if not res.get("success"):
-        return await ctx.send(embed=embed("❌ Error", "You must register first with `!register`."))
+        return await ctx.send(embed=embed("❌ Error", "You must register first using `!register`."))
 
-    c = res["data"]["coins"]
-    await ctx.send(embed=embed("💰 Your Balance", f"You have **{c} coins**."))
+    await ctx.send(embed=embed("💰 Your Coins", f"You currently have **{res['data']['coins']} coins**."))
 
 
 @bot.command()
@@ -174,14 +163,13 @@ async def daily(ctx):
 
 @bot.command()
 async def farm(ctx):
-    """Activate farming (affiliates user to your API key)."""
     uid = str(ctx.author.id)
     res = await api.farm(uid)
 
     if not res.get("success"):
         return await ctx.send(embed=embed("❌ Error", str(res)))
 
-    # Track unique farm users
+    # Track unique affiliates
     stats = load_stats()
     if uid not in stats["farmed_users"]:
         stats["farmed_users"].append(uid)
@@ -189,24 +177,33 @@ async def farm(ctx):
 
     msg = (
         "🌱 **Farming Activated!**\n\n"
-        "Your farming session is now linked to this bot.\n"
-        "👉 Go to **https://join4join.xyz** → Login → FARM.\n"
-        "All farming is now done on the website.\n\n"
-        "**You will still earn coins normally, and the developer will get rewards.**"
+        "Your farming session is linked to this bot.\n"
+        "You can now farm safely on the Join4Join website.\n"
+        "\nJoin the farming page to begin."
     )
 
     await ctx.send(embed=embed("🌱 Farming Started", msg))
 
 
+# ======================================================
+# FIXED !BUY COMMAND WITH CLEAN INVITE + YES/NO FILTER
+# ======================================================
 @bot.command()
-async def buy(ctx, coins: int, invite: str, language: str, alt: bool = False):
-    res = await api.buy(str(ctx.author.id), coins, invite, language, alt)
+async def buy(ctx, coins: int, invite: str, language: str, alt: str = "no"):
+    # Convert yes/no → boolean
+    alt_bool = alt.lower() in ["yes", "true", "y"]
+
+    # Extract invite code automatically
+    if "discord.gg/" in invite or "discord.com/invite/" in invite:
+        invite = invite.split("/")[-1]
+
+    res = await api.buy(str(ctx.author.id), coins, invite, language, alt_bool)
 
     if not res.get("success"):
-        return await ctx.send(embed=embed("❌ Error", str(res)))
+        return await ctx.send(embed=embed("❌ Error", res.get("message", "Unknown error")))
 
     if "link" in res:
-        return await ctx.send(embed=embed("🔗 Confirm Purchase", f"[Click to confirm your ad]({res['link']})"))
+        return await ctx.send(embed=embed("🔗 Confirm Purchase", f"[Click here to confirm]({res['link']})"))
 
     await ctx.send(embed=embed("📢 Ad Purchased", "Your Join4Join ad is now active!"))
 
@@ -219,7 +216,7 @@ async def pay(ctx, receiver_id: str, coins: int):
         return await ctx.send(embed=embed("❌ Error", str(res)))
 
     if "link" in res:
-        return await ctx.send(embed=embed("🔗 Confirm Transfer", f"[Click to confirm transaction]({res['link']})"))
+        return await ctx.send(embed=embed("🔗 Confirm Transfer", f"[Click here to confirm]({res['link']})"))
 
     await ctx.send(embed=embed("💸 Transfer Complete", f"Sent **{coins} coins** to `{receiver_id}`!"))
 
@@ -273,7 +270,7 @@ async def checkall(ctx):
 
 
 # ======================================================
-# 📊 DEVELOPER STATS
+# DEVELOPER STATS (SAFE)
 # ======================================================
 @bot.command()
 async def devstats(ctx):
@@ -282,60 +279,55 @@ async def devstats(ctx):
     reg = stats["registered_users"]
     farm_users = len(stats["farmed_users"])
 
-    est_dev_coins = reg * 3  # farming coins cannot be tracked locally
+    est_dev_coins = reg * 3  # REAL dev coins come from Join4Join backend
 
     msg = (
         f"🧍 **Registered Users:** {reg}\n"
         f"🌱 **Affiliated Farming Users:** {farm_users}\n\n"
         f"💰 **Estimated Dev Coins Earned:** `{est_dev_coins}`\n"
-        f"(Real farming rewards are handled by Join4Join automatically.)"
+        f"(Real farm coins are handled by Join4Join automatically.)"
     )
 
-    await ctx.send(embed=embed("👑 Developer Stats", msg, COLOR))
+    await ctx.send(embed=embed("👑 Developer Stats", msg))
 
 
 # ======================================================
-# 📘 HELP MENU (STYLE B)
+# HELP MENU (STYLE B, WITH EXAMPLES)
 # ======================================================
 @bot.command()
 async def j4jhelp(ctx):
     msg = (
         "**👤 ACCOUNT COMMANDS**\n"
-        "• `!register` – Create your Join4Join account\n"
+        "• `!register` – Create your account\n"
         "  *Example:* `!register`\n\n"
-        
-        "• `!coins` – Check your coin balance\n"
+        "• `!coins` – Check your balance\n"
         "  *Example:* `!coins`\n\n"
-        
-        "• `!daily` – Claim your daily reward\n"
+        "• `!daily` – Claim daily coins\n"
         "  *Example:* `!daily`\n\n"
-        
+
         "**🌱 FARMING COMMANDS**\n"
-        "• `!farm` – Activate farming affiliation (farming is done on the website)\n"
+        "• `!farm` – Activate farming session\n"
         "  *Example:* `!farm`\n\n"
-        
-        "• `!check` – Check if you can leave the current server\n"
+        "• `!check` – See if you can leave the current server\n"
         "  *Example:* `!check`\n\n"
-        
-        "• `!checkall` – List all servers you can leave safely\n"
+        "• `!checkall` – List all servers you can leave\n"
         "  *Example:* `!checkall`\n\n"
-        
+
         "**📢 ADVERTISING COMMANDS**\n"
-        "• `!buy <coins> <invite> <language> <alt>` – Create a Join4Join ad\n"
-        "  *Example:* `!buy 3 discord.gg/yourserver en yes`\n"
-        "  *(Language: en/fr/tr/all — Alt filter: yes/no)*\n\n"
-        
-        "**💸 COIN TRANSFER**\n"
-        "• `!pay <user_id> <coins>` – Send coins to another user\n"
+        "• `!buy <coins> <invite> <language> <yes/no>`\n"
+        "  *Example:* `!buy 3 6nRx3KWG en yes`\n"
+        "  *(Languages: en / fr / tr / all)*\n\n"
+
+        "**💸 COINS TRANSFER**\n"
+        "• `!pay <user_id> <coins>` – Send coins\n"
         "  *Example:* `!pay 123456789012345678 5`\n\n"
-        
-        "**👑 DEVELOPER COMMANDS**\n"
-        "• `!devstats` – View how many users you registered & farm-affiliated\n"
+
+        "**👑 DEVELOPER**\n"
+        "• `!devstats` – View your developer earnings\n"
         "  *Example:* `!devstats`\n"
     )
 
     await ctx.send(embed=embed("🤖 Join4Join Bot Help Menu", msg))
-
 
 
 # ======================================================
