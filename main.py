@@ -84,7 +84,7 @@ api = Join4JoinAPI()
 # -------------------------
 # COMMANDS
 # -------------------------
-@@bot.command()
+@bot.command()
 async def register(ctx):
     res = await api.create_user(str(ctx.author.id))
 
