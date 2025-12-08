@@ -226,4 +226,4 @@ async def checkall(ctx):
 # -------------------------
 # RUN BOT
 # -------------------------
-bot.run(TOKEN)
+bot.run(DISCORD_TOKEN)
