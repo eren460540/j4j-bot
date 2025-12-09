@@ -6,14 +6,14 @@ import json
 import math
 
 # ========================================================
-# ENVIRONMENT
+# ENVIRONMENT VARIABLES
 # ========================================================
 DISCORD_TOKEN = os.getenv("TOKEN")
 API_KEY = os.getenv("API_KEY")
 BASE_URL = "https://join4join.xyz/api/v1"
 
 # ========================================================
-# DEVSTATS LOCAL TRACKING (DOES NOT AFFECT REAL REWARDS)
+# LOCAL DEV REWARD TRACKER (does NOT affect real rewards)
 # ========================================================
 if not os.path.exists("devstats.json"):
     with open("devstats.json", "w") as f:
@@ -34,39 +34,43 @@ intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-PURPLE = 0x8A2BE2  # neon purple cyberpunk
+CYBER_PURPLE = 0x8A2BE2
 
 
-# ========================================================
-# CYBERPUNK EMBED MAKER
-# ========================================================
 def cyber(title, desc):
-    embed = discord.Embed(title=title, description=desc, color=PURPLE)
-    embed.set_footer(text="Join4Join Bot • Cyberpunk Edition")
-    return embed
+    e = discord.Embed(title=title, description=desc, color=CYBER_PURPLE)
+    e.set_footer(text="Join4Join Bot • Cyberpunk Edition")
+    return e
 
 
 # ========================================================
-# J4J API CLIENT — NOW 100% CORRECT
+# JOIN4JOIN API — NOW FULLY CORRECT
 # ========================================================
 class J4J:
     def __init__(self):
         self.key = API_KEY
+
         self.headers = {
             "Authorization": self.key,
-            "Content-Type": "application/json",
             "Accept": "application/json",
-            "User-Agent": "Mozilla/5.0"
+            "User-Agent": "Mozilla/5.0",
+            "Content-Type": "application/json",
         }
 
-    async def _post(self, endpoint, data):
+    async def _post(self, endpoint, body):
         url = f"{BASE_URL}/{endpoint}"
+
         async with aiohttp.ClientSession() as session:
-            async with session.post(url, data=json.dumps(data), headers=self.headers) as res:
+            async with session.post(
+                url,
+                json=body,             # FIXED: API now receives JSON properly
+                headers=self.headers,
+            ) as res:
                 try:
                     return await res.json()
                 except:
-                    return {"success": False, "message": "Invalid JSON"}
+                    text = await res.text()
+                    return {"success": False, "message": "Invalid JSON", "raw": text}
 
     async def _get(self, endpoint, params):
         url = f"{BASE_URL}/{endpoint}"
@@ -75,23 +79,24 @@ class J4J:
                 try:
                     return await res.json()
                 except:
-                    return {"success": False, "message": "Invalid JSON"}
+                    text = await res.text()
+                    return {"success": False, "message": "Invalid JSON", "raw": text}
 
-    # Correct method (from repo)
-    async def create_user(self, user_id):
-        return await self._post("user/create", {"user_id": user_id})
+    # API FUNCTIONS
+    async def create_user(self, uid):
+        return await self._post("user/create", {"user_id": uid})
 
-    async def get_user(self, user_id):
-        return await self._get("user/get", {"user_id": user_id})
+    async def get_user(self, uid):
+        return await self._get("user/get", {"user_id": uid})
 
-    async def farm(self, user_id):
-        return await self._post("join4join/farm", {"user_id": user_id})
+    async def daily(self, uid):
+        return await self._post("join4join/daily", {"user_id": uid})
 
-    async def daily(self, user_id):
-        return await self._post("join4join/daily", {"user_id": user_id})
+    async def farm(self, uid):
+        return await self._post("join4join/farm", {"user_id": uid})
 
+    # BUY: You want dashboard only
     async def buy(self):
-        # You want !buy to ONLY open dashboard link
         return {"success": True}
 
     async def pay(self, receiver, donator, coins):
@@ -101,14 +106,15 @@ class J4J:
             "coins": coins
         })
 
-    async def info(self, guild_id):
-        return await self._post("join4join/info", {"guild_id": guild_id})
+    async def info(self, gid):
+        return await self._post("join4join/info", {"guild_id": gid})
 
-    async def check(self, guild_id, user_id):
-        return await self._post("join4join/check", {"guild_id": guild_id, "user_id": user_id})
+    async def check(self, gid, uid):
+        return await self._post("join4join/check", {"guild_id": gid, "user_id": uid})
 
-    async def checkall(self, user_id):
-        return await self._post("join4join/check/all", {"user_id": user_id})
+    async def checkall(self, uid):
+        return await self._post("join4join/check/all", {"user_id": uid})
+
 
 api = J4J()
 
@@ -137,8 +143,10 @@ async def register(ctx):
 
     coins = res["data"]["coins"]
 
-    await ctx.send(embed=cyber("🛸 Account Created",
-                               f"✅ Your account is ready!\n💰 Starting coins: **{coins}**"))
+    await ctx.send(embed=cyber(
+        "🛸 Account Created",
+        f"✅ Successfully created your account!\n💰 Starting coins: **{coins}**"
+    ))
 
 
 # ------------------------ COINS ------------------------
@@ -150,10 +158,8 @@ async def coins(ctx):
     if not res.get("success"):
         return await ctx.send(embed=cyber("💰 Balance", "❌ You must register first."))
 
-    balance = res["data"]["coins"]
-
-    await ctx.send(embed=cyber("💰 Balance",
-                               f"Your coins: **{balance}**"))
+    bal = res["data"]["coins"]
+    await ctx.send(embed=cyber("💰 Balance", f"Your coins: **{bal}**"))
 
 
 # ------------------------ DAILY ------------------------
@@ -174,7 +180,7 @@ async def daily(ctx):
 
         return await ctx.send(embed=cyber(
             "🎁 Daily Reward",
-            f"⏳ Not ready.\nCome back in **{hours}h {minutes % 60}m**"
+            f"⏳ Not ready.\nTry again in **{hours}h {minutes % 60}m**"
         ))
 
     await ctx.send(embed=cyber("🎁 Daily Reward",
@@ -195,10 +201,9 @@ async def farm(ctx):
         stats["farmed_users"].append(uid)
         save_stats(stats)
 
-    # ONLY link to farming page
     return await ctx.send(embed=cyber(
         "🌱 Farming Activated",
-        "Your farming is activated!\n\n"
+        "Your farming session is active!\n\n"
         "**[CLICK HERE TO START FARMING](https://join4join.xyz/?aff=1317419437854560288)**"
     ))
 
@@ -206,9 +211,9 @@ async def farm(ctx):
 # ------------------------ BUY ------------------------
 @bot.command()
 async def buy(ctx):
-    # You want NO parameters → only dashboard link
+    # You requested: !buy should ONLY show dashboard
     return await ctx.send(embed=cyber(
-        "📢 Create Advertisement",
+        "📢 Advertisement Dashboard",
         "**[OPEN DASHBOARD](https://join4join.xyz/dashboard)**"
     ))
 
@@ -220,43 +225,45 @@ async def pay(ctx, receiver: str, coins: int):
     res = await api.pay(receiver, uid, coins)
 
     if not res.get("success"):
-        return await ctx.send(embed=cyber("💸 Pay", f"❌ {res}"))
+        return await ctx.send(embed=cyber("💸 Transfer", f"❌ {res}"))
 
-    return await ctx.send(embed=cyber("💸 Transfer Complete",
-                                     f"Sent **{coins} coins** to `{receiver}`."))
+    return await ctx.send(embed=cyber(
+        "💸 Transfer Complete",
+        f"Sent **{coins} coins** to `{receiver}`."
+    ))
 
 
 # ------------------------ INFO ------------------------
 @bot.command()
-async def info(ctx, guild_id: str = None):
-    gid = guild_id or str(ctx.guild.id)
+async def info(ctx, gid: str = None):
+    gid = gid or str(ctx.guild.id)
     res = await api.info(gid)
 
     if not res.get("success"):
-        return await ctx.send(embed=cyber("📡 Info", "❌ Error fetching server info."))
+        return await ctx.send(embed=cyber("📡 Info", "❌ Error."))
 
     d = res["data"]
 
-    await ctx.send(embed=cyber("📡 Server Info",
-                               f"**Name:** {d['name']}\n"
-                               f"**Invite:** {d['invite']}\n"
-                               f"**Ad running:** {d['ad']}\n"
-                               f"**Bought:** {d['invitation_request']}\n"
-                               f"**Remaining:** {d['invitation_update']}"))
+    await ctx.send(embed=cyber(
+        "📡 Server Information",
+        f"**Name:** {d['name']}\n"
+        f"**Invite:** {d['invite']}\n"
+        f"**Ad running:** {d['ad']}\n"
+        f"**Bought:** {d['invitation_request']}\n"
+        f"**Remaining:** {d['invitation_update']}"
+    ))
 
 
 # ------------------------ CHECK ------------------------
 @bot.command()
-async def check(ctx, guild_id: str = None):
-    gid = guild_id or str(ctx.guild.id)
+async def check(ctx, gid: str = None):
+    gid = gid or str(ctx.guild.id)
     res = await api.check(gid, str(ctx.author.id))
 
     if not res.get("success"):
         return await ctx.send(embed=cyber("🧪 Leave Check", "❌ Error."))
 
-    can = res["data"]["check"]
-
-    msg = "✅ You may leave this server." if can else "❌ You cannot leave yet."
+    msg = "✅ You can leave this server." if res["data"]["check"] else "❌ You cannot leave yet."
 
     await ctx.send(embed=cyber("🧪 Leave Check", msg))
 
@@ -273,26 +280,25 @@ async def checkall(ctx):
     ids = res["data"]["check"]
 
     if not ids:
-        return await ctx.send(embed=cyber("📜 Leaveable Servers", "No servers available."))
+        return await ctx.send(embed=cyber("📜 Leaveable Servers", "You cannot leave any servers yet."))
 
-    lines = "\n".join(f"• `{g}`" for g in ids)
+    formatted = "\n".join(f"• `{g}`" for g in ids)
 
-    await ctx.send(embed=cyber("📜 Leaveable Servers", lines))
+    await ctx.send(embed=cyber("📜 Leaveable Servers", formatted))
 
 
 # ------------------------ DEVSTATS ------------------------
 @bot.command()
 async def devstats(ctx):
     stats = load_stats()
-    est = stats["registered_users"] * 3
-
+    coins = stats["registered_users"] * 3
     farms = len(stats["farmed_users"])
 
     await ctx.send(embed=cyber(
         "👾 Developer Stats",
-        f"👥 Registered: **{stats['registered_users']}**\n"
-        f"🌱 Farmers: **{farms}**\n"
-        f"💰 Estimated coins: **{est}**"
+        f"👥 Registered users: **{stats['registered_users']}**\n"
+        f"🌱 Farming users: **{farms}**\n"
+        f"💰 Estimated coins: **{coins}**"
     ))
 
 
@@ -301,50 +307,23 @@ async def devstats(ctx):
 async def j4jhelp(ctx):
     await ctx.send(embed=cyber(
         "📘 Command Menu",
-        "**ACCOUNT**\n"
-        "`!register`\n"
-        "`!coins`\n"
-        "`!daily`\n\n"
+        "**ACCOUNT COMMANDS**\n"
+        "`!register` — Create your account\n"
+        "`!coins` — View balance\n"
+        "`!daily` — Claim daily reward\n\n"
         "**FARMING**\n"
         "`!farm`\n"
         "`!check <server-id>`\n"
         "`!checkall`\n\n"
         "**ADS**\n"
-        "`!buy` → Opens dashboard\n\n"
+        "`!buy` — Opens dashboard\n\n"
         "**COINS**\n"
         "`!pay <user_id> <amount>`\n\n"
         "**SERVER**\n"
         "`!info`\n\n"
-        "**DEV**\n"
+        "**DEVELOPER**\n"
         "`!devstats`"
     ))
-
-
-
-
-
-@bot.command()
-async def testraw(ctx):
-    import aiohttp, json
-
-    url = "https://join4join.xyz/api/v1/user/create"
-    headers = {
-        "Authorization": API_KEY,
-        "Accept": "*/*",
-        "User-Agent": "Mozilla/5.0"
-    }
-
-    body = json.dumps({"user_id": str(ctx.author.id)})
-
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, data=body) as r:
-            text = await r.text()
-            await ctx.send(f"RAW RESPONSE:\n```{text[:1800]}```")
-
-
-
-
-
 
 
 # ========================================================
