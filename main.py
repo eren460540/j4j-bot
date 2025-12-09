@@ -320,6 +320,33 @@ async def j4jhelp(ctx):
     ))
 
 
+
+
+
+@bot.command()
+async def testraw(ctx):
+    import aiohttp, json
+
+    url = "https://join4join.xyz/api/v1/user/create"
+    headers = {
+        "Authorization": API_KEY,
+        "Accept": "*/*",
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    body = json.dumps({"user_id": str(ctx.author.id)})
+
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, headers=headers, data=body) as r:
+            text = await r.text()
+            await ctx.send(f"RAW RESPONSE:\n```{text[:1800]}```")
+
+
+
+
+
+
+
 # ========================================================
 # RUN BOT
 # ========================================================
