@@ -1,11 +1,14 @@
 import asyncio
+import os
 import random
 from datetime import datetime, timezone
 
 import discord
 from discord.ext import commands
 
-TOKEN = "MTQ0NzYyNjE4MTA1MzY0NDgzMg.G7Uz9W.EmRm-0g6dUSo4zeQf57V5e2T52nZQOScK-ptK8"
+TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise RuntimeError("Missing TOKEN environment variable")
 
 intents = discord.Intents.default()
 intents.message_content = True
