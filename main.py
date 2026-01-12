@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import discord
 from discord.ext import commands
 
-TOKEN = "YOUR_BOT_TOKEN_HERE"
+TOKEN = "MTQ0NzYyNjE4MTA1MzY0NDgzMg.G7Uz9W.EmRm-0g6dUSo4zeQf57V5e2T52nZQOScK-ptK8"
 
 intents = discord.Intents.default()
 intents.message_content = True
